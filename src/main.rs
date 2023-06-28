@@ -14,16 +14,21 @@ const OUTPUT_DIR: &str = "output/padded/";
 const VRT_FILE: &str = "data/data.vrt";
 const MARGIN: usize = 100;
 
-pub fn vrt_buffer() -> Result<(), Box<dyn Error>> {
+pub fn vrt_buffer(
+    input_dir: &Path,
+    output_dir: &Path,
+    vrt_file: &Path,
+    margin: usize,
+) -> Result<(), Box<dyn Error>> {
     // check if output directory exists and create it if not
-    fs::create_dir_all(OUTPUT_DIR)?;
+    fs::create_dir_all(output_dir)?;
 
     // Load VRT once for efficiency
-    let vrt_ds = Dataset::open(&Path::new(VRT_FILE))?;
+    let vrt_ds = Dataset::open(vrt_file)?;
     let vrt_band = vrt_ds.rasterband(1)?;
 
     // Get the list of geotiff files in the input directory
-    let paths = fs::read_dir(INPUT_DIR)?;
+    let paths = fs::read_dir(input_dir)?;
 
     // For each file in the directory, add margins and save to the output directory
     for path in paths {
@@ -38,20 +43,24 @@ pub fn vrt_buffer() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
-pub fn buffer_down_to_size() -> Result<(), Box<dyn Error>> {
-    let out_crop_dir = PathBuf::from("output/cropped/");
-    // check if output directory exists and create it if not
-    fs::create_dir_all(&out_crop_dir)?;
-
-    // get a list of the buffered files
-    let paths = fs::read_dir(OUTPUT_DIR)?;
+/// takes a directory of the original directory with the tif files that where buffered and
+/// uses them as the reference to trim the buffered files to the original size
+/// org_dir: directory of the original files
+/// input_dir: directory of the buffered files
+/// output_dir: directory to save the trimmed files
+pub fn crop_down_to_size(
+    org_dir: &Path,
+    input_dir: &Path,
+    output_dir: &Path,
+) -> Result<(), Box<dyn Error>> {
+    fs::create_dir_all(&output_dir)?;
+    let paths = fs::read_dir(input_dir)?;
     for path in paths {
         let path = path?.path();
         if let Some(extension) = path.extension().and_then(std::ffi::OsStr::to_str) {
             if extension == "tif" || extension == "tiff" {
-                let input_path = Path::new(INPUT_DIR).join(path.file_name().unwrap());
-                let output_path = out_crop_dir.join(path.file_name().unwrap());
+                let input_path = org_dir.join(path.file_name().unwrap());
+                let output_path = output_dir.join(path.file_name().unwrap());
                 trim_buffered_to_size(&input_path, &path, &output_path)?;
             }
         }
@@ -162,6 +171,12 @@ fn trim_buffered_to_size(
     Ok(())
 }
 fn main() {
-    vrt_buffer().unwrap();
-    buffer_down_to_size().unwrap();
+    let org_data = PathBuf::from("data/");
+    let padded_data = PathBuf::from("output/data_padded/");
+    let trimmed_data = PathBuf::from("output/data_trimmed/");
+    let vrt_path = PathBuf::from("data/data.vrt");
+    let margin = 100;
+
+    vrt_buffer(&org_data, &padded_data, &vrt_path, margin).unwrap();
+    crop_down_to_size(&org_data, &padded_data, &trimmed_data).unwrap();
 }
