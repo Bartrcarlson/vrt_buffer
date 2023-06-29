@@ -36,11 +36,11 @@ Refer to the individual function documentation for more details on their usage.
 
 ### Command line
 the clap framwork is also used to provide a command line interface for the crate.
-the easiest way to use the CLI is to run
-``zsh
+To get a list of the available commands.
+
+```zsh
 vrt_buffer -h
-``
-to get a list of the available commands.
+```
 
 ## Installation
 gdal must be installed and the path environment variable must be set to the gdal binaries.
