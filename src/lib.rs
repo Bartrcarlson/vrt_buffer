@@ -34,7 +34,7 @@
 //! the clap framwork is also used to provide a command line interface for the crate.
 //! the easiest way to use the CLI is to run
 //!```zsh
-//! cargo run --release -- -h
+//! vrt_buffer -h
 //!```
 //! to get a list of the available commands.
 //!
