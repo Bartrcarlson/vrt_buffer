@@ -9,11 +9,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const INPUT_DIR: &str = "data/";
-const OUTPUT_DIR: &str = "output/padded/";
-const VRT_FILE: &str = "data/data.vrt";
-const MARGIN: usize = 100;
-
 pub fn vrt_buffer(
     input_dir: &Path,
     output_dir: &Path,
@@ -35,8 +30,8 @@ pub fn vrt_buffer(
         let path = path?.path();
         if let Some(extension) = path.extension().and_then(std::ffi::OsStr::to_str) {
             if extension == "tif" || extension == "tiff" {
-                let output_path = Path::new(OUTPUT_DIR).join(path.file_name().unwrap());
-                add_margin_to_geotiff(&path, &output_path, MARGIN, &vrt_band, &vrt_ds)?;
+                let output_path = Path::new(output_dir).join(path.file_name().unwrap());
+                add_margin_to_geotiff(&path, &output_path, margin, &vrt_band, &vrt_ds)?;
             }
         }
     }
@@ -77,7 +72,7 @@ fn add_margin_to_geotiff(
 ) -> Result<(), Box<dyn Error>> {
     // Open the geotiff file
     let ds = Dataset::open(file_path)?;
-    let band = ds.rasterband(1)?;
+    // let band = ds.rasterband(1)?;
 
     // Get the original geotiff's data and metadata
     let geotransform = ds.geo_transform()?;
@@ -85,8 +80,8 @@ fn add_margin_to_geotiff(
 
     // Compute expanded geotransform
     let mut new_geotransform = geotransform.clone();
-    new_geotransform[0] -= (margin as f64) * geotransform[1]; // x_origin
-    new_geotransform[3] -= (margin as f64) * geotransform[5]; // y_origin
+    new_geotransform[0] -= (margin as f32) * geotransform[1]; // x_origin
+    new_geotransform[3] -= (margin as f32) * geotransform[5]; // y_origin
 
     // Read data from the VRT
     let xoff = ((new_geotransform[0] - vrt_ds.geo_transform()?[0]) / vrt_ds.geo_transform()?[1])
@@ -102,7 +97,7 @@ fn add_margin_to_geotiff(
         (vrt_ds.raster_size().0 as isize - xoff).min((ds.raster_size().0 + 2 * margin) as isize);
     let rows =
         (vrt_ds.raster_size().1 as isize - yoff).min((ds.raster_size().1 + 2 * margin) as isize);
-    let new_data = vrt_band.read_as::<f64>(
+    let new_data = vrt_band.read_as::<f32>(
         (xoff, yoff),
         (cols as usize, rows as usize),
         (cols as usize, rows as usize),
@@ -111,7 +106,7 @@ fn add_margin_to_geotiff(
 
     // Create a new geotiff file
     let driver = DriverManager::get_driver_by_name("GTiff")?;
-    let mut new_ds = driver.create_with_band_type::<f64, _>(
+    let mut new_ds = driver.create_with_band_type::<f32, _>(
         output_path.to_str().unwrap(),
         cols as isize,
         rows as isize,
@@ -142,7 +137,7 @@ fn trim_buffered_to_size(
 
     // read data from the buffered raster
     let band = dsb.rasterband(1)?;
-    let buffered_data = band.read_as::<f64>(
+    let buffered_data = band.read_as::<f32>(
         (x_offset as isize, y_offset as isize),
         (dso.raster_size().0, dso.raster_size().1),
         (dso.raster_size().0, dso.raster_size().1),
@@ -151,7 +146,7 @@ fn trim_buffered_to_size(
 
     // create an output raster with the same size as the original raster
     let driver = DriverManager::get_driver_by_name("GTiff")?;
-    let mut dso_out = driver.create_with_band_type::<f64, _>(
+    let mut dso_out = driver.create_with_band_type::<f32, _>(
         output_raster.to_str().unwrap(),
         dso.raster_size().0 as isize,
         dso.raster_size().1 as isize,
