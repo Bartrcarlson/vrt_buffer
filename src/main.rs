@@ -132,10 +132,16 @@ fn add_margin_to_geotiff(
     vrt_ds: &Dataset,
 ) -> Result<(), Box<dyn Error>> {
     // Open the geotiff file
-    let ds = Dataset::open(file_path)?;
+    let ds = match Dataset::open(file_path) {
+        Ok(ds) => ds,
+        Err(e) => return Err(Box::new(e)),
+    };
 
     // Get the original geotiff's data and metadata
-    let geotransform = ds.geo_transform()?;
+    let geotransform = match ds.geo_transform() {
+        Ok(geotransform) => geotransform,
+        Err(e) => return Err(Box::new(e)),
+    };
     let projection = ds.projection();
 
     // Compute expanded geotransform
@@ -144,39 +150,65 @@ fn add_margin_to_geotiff(
     new_geotransform[3] -= (margin as f64) * geotransform[5]; // y_origin
 
     // Read data from the VRT
-    let xoff = ((new_geotransform[0] - vrt_ds.geo_transform()?[0]) / vrt_ds.geo_transform()?[1])
+    let vrt_geotransform = match vrt_ds.geo_transform() {
+        Ok(vrt_geotransform) => vrt_geotransform,
+        Err(e) => return Err(Box::new(e)),
+    };
+    let xoff = ((new_geotransform[0] - vrt_geotransform[0]) / vrt_geotransform[1])
         .max(0.0)
         .floor() as isize;
-    let yoff = ((vrt_ds.geo_transform()?[3] - new_geotransform[3])
-        / vrt_ds.geo_transform()?[5].abs())
-    .max(0.0)
-    .floor() as isize;
+    let yoff = ((vrt_geotransform[3] - new_geotransform[3]) / vrt_geotransform[5].abs())
+        .max(0.0)
+        .floor() as isize;
 
     // Make sure we don't exceed the raster dimensions
     let cols =
         (vrt_ds.raster_size().0 as isize - xoff).min((ds.raster_size().0 + 2 * margin) as isize);
     let rows =
         (vrt_ds.raster_size().1 as isize - yoff).min((ds.raster_size().1 + 2 * margin) as isize);
-    let new_data = vrt_band.read_as::<f32>(
+
+    let new_data = match vrt_band.read_as::<f32>(
         (xoff, yoff),
         (cols as usize, rows as usize),
         (cols as usize, rows as usize),
         None,
-    )?;
+    ) {
+        Ok(new_data) => new_data,
+        Err(e) => return Err(Box::new(e)),
+    };
 
     // Create a new geotiff file
-    let driver = DriverManager::get_driver_by_name("GTiff")?;
-    let mut new_ds = driver.create_with_band_type::<f32, _>(
+    let driver = match DriverManager::get_driver_by_name("GTiff") {
+        Ok(driver) => driver,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    let mut new_ds = match driver.create_with_band_type::<f32, _>(
         output_path.to_str().unwrap(),
         cols as isize,
         rows as isize,
         1,
-    )?;
-    new_ds.set_geo_transform(&new_geotransform)?;
-    new_ds.set_projection(&projection)?;
+    ) {
+        Ok(new_ds) => new_ds,
+        Err(e) => return Err(Box::new(e)),
+    };
 
-    let mut new_band = new_ds.rasterband(1)?;
-    new_band.write((0, 0), (cols as usize, rows as usize), &new_data)?;
+    if let Err(e) = new_ds.set_geo_transform(&new_geotransform) {
+        return Err(Box::new(e));
+    };
+
+    if let Err(e) = new_ds.set_projection(&projection) {
+        return Err(Box::new(e));
+    };
+
+    let mut new_band = match new_ds.rasterband(1) {
+        Ok(new_band) => new_band,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    if let Err(e) = new_band.write((0, 0), (cols as usize, rows as usize), &new_data) {
+        return Err(Box::new(e));
+    };
 
     Ok(())
 }
@@ -185,43 +217,81 @@ fn trim_buffered_to_size(
     buffered_raster: &PathBuf,
     output_raster: &PathBuf,
 ) -> Result<(), Box<dyn Error>> {
-    let dso = Dataset::open(org_raster)?;
-    let dsb = Dataset::open(buffered_raster)?;
+    let dso = match Dataset::open(org_raster) {
+        Ok(dso) => dso,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    let dsb = match Dataset::open(buffered_raster) {
+        Ok(dsb) => dsb,
+        Err(e) => return Err(Box::new(e)),
+    };
+
     let projo = dso.projection();
 
-    // Compute offsets in buffered raster based on geo_transform
-    let geo_transform_o = dso.geo_transform()?;
-    let geo_transform_b = dsb.geo_transform()?;
+    let geo_transform_o = match dso.geo_transform() {
+        Ok(geo_transform) => geo_transform,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    let geo_transform_b = match dsb.geo_transform() {
+        Ok(geo_transform) => geo_transform,
+        Err(e) => return Err(Box::new(e)),
+    };
+
     let x_offset = ((geo_transform_o[0] - geo_transform_b[0]) / geo_transform_b[1]) as usize;
     let y_offset = ((geo_transform_o[3] - geo_transform_b[3]) / geo_transform_b[5]) as usize;
 
-    // read data from the buffered raster
-    let band = dsb.rasterband(1)?;
-    let buffered_data = band.read_as::<f32>(
+    let band = match dsb.rasterband(1) {
+        Ok(band) => band,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    let buffered_data = match band.read_as::<f32>(
         (x_offset as isize, y_offset as isize),
         (dso.raster_size().0, dso.raster_size().1),
         (dso.raster_size().0, dso.raster_size().1),
         None,
-    )?;
+    ) {
+        Ok(buffered_data) => buffered_data,
+        Err(e) => return Err(Box::new(e)),
+    };
 
-    // create an output raster with the same size as the original raster
-    let driver = DriverManager::get_driver_by_name("GTiff")?;
-    let mut dso_out = driver.create_with_band_type::<f32, _>(
+    let driver = match DriverManager::get_driver_by_name("GTiff") {
+        Ok(driver) => driver,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    let mut dso_out = match driver.create_with_band_type::<f32, _>(
         output_raster.to_str().unwrap(),
         dso.raster_size().0 as isize,
         dso.raster_size().1 as isize,
         1,
-    )?;
-    dso_out.set_geo_transform(&geo_transform_o)?;
-    dso_out.set_projection(&projo)?;
+    ) {
+        Ok(dso_out) => dso_out,
+        Err(e) => return Err(Box::new(e)),
+    };
 
-    // write data to the output raster
-    let mut band_out = dso_out.rasterband(1)?;
-    band_out.write(
+    if let Err(e) = dso_out.set_geo_transform(&geo_transform_o) {
+        return Err(Box::new(e));
+    };
+
+    if let Err(e) = dso_out.set_projection(&projo) {
+        return Err(Box::new(e));
+    };
+
+    let mut band_out = match dso_out.rasterband(1) {
+        Ok(band_out) => band_out,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    if let Err(e) = band_out.write(
         (0, 0),
         (dso.raster_size().0, dso.raster_size().1),
         &buffered_data,
-    )?;
+    ) {
+        return Err(Box::new(e));
+    };
 
     Ok(())
 }
