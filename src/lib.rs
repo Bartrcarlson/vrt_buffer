@@ -1,7 +1,11 @@
 //! # vrt_buffer
 //!
-//! `vrt_buffer` is a crate that provides functions for adding a margin to geotiff files using a VRT file as a reference,
-//! as well as cropping the buffered files back to the original size.
+//!`vrt_buffer` is a crate that provides functions for adding a margin to geotiff files using a VRT file as a reference,
+//! as well as cropping the buffered files back to the original size. this is useful preprocessing step when working with
+//! large datasets of raster files where pixel values at the edges of the files are used in calculations. Computations that
+//! occur using a search radius around each pixel will be incorrect at the edges of the files. by adding a margin to the files
+//! before performing the calculations, the edge pixels will be correct. after the calculations are complete, the files can
+//! be cropped back to their original size.
 //!
 //! ## Example
 //!
@@ -44,7 +48,11 @@
 //! cargo install --git https://github.com/Bartrcarlson/vrt_buffer.git
 //! cargo uninstall vrt_buffer
 //! ```
+//! ## License
+//! This project is licensed under the MIT License
 //!
+//! ## Contributing
+//! Pull requests are welcome. KISS and YAGNI principles are followed.
 use gdal::{raster::RasterBand, Dataset, DriverManager};
 use std::{error::Error, fs, path::Path};
 
