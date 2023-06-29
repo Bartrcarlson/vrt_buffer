@@ -1,7 +1,9 @@
-use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
+
+use clap::{Args, Subcommand};
 
 #[derive(Debug, clap::Parser)]
-#[clap(author, version, about)]
+#[clap(author = "Bart Carlson", version = "1.0")]
 pub struct BufferCliArgs {
     #[clap(subcommand)]
     pub subcmd: Subaction,
@@ -20,15 +22,15 @@ pub enum Subaction {
 pub struct PadCommand {
     /// the input raster directory
     #[clap(short, long)]
-    pub input: String,
+    pub input: PathBuf,
 
     /// the output raster directory
     #[clap(short, long)]
-    pub output: String,
+    pub output: PathBuf,
 
     /// the vrt file that describes the subject area including the adjacent rasters
     #[clap(short, long)]
-    pub vrt: String,
+    pub vrt: PathBuf,
 
     /// the number of pixels to pad the raster with
     #[clap(short, long)]
@@ -38,11 +40,14 @@ pub struct PadCommand {
 #[derive(Debug, Args)]
 pub struct CropCommand {
     /// the original raster directory used for knowing the extent to crop to
-    pub orginal: String,
+    #[clap(short, long)]
+    pub orginal: PathBuf,
 
     /// the input raster directory
-    pub input: String,
+    #[clap(short, long)]
+    pub input: PathBuf,
 
     /// the output raster directory
-    pub output: String,
+    #[clap(short, long)]
+    pub output: PathBuf,
 }
