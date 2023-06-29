@@ -91,7 +91,7 @@ pub fn crop_down_to_size(
     input_dir: &Path,
     output_dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
-    fs::create_dir_all(&output_dir)?;
+    fs::create_dir_all(output_dir)?;
     let paths = fs::read_dir(input_dir)?;
 
     for path in paths {
@@ -111,8 +111,8 @@ pub fn crop_down_to_size(
                         continue;
                     }
                 };
-                let input_path = org_dir.join(&file_name);
-                let output_path = output_dir.join(&file_name);
+                let input_path = org_dir.join(file_name);
+                let output_path = output_dir.join(file_name);
                 match trim_buffered_to_size(&input_path, &path, &output_path) {
                     Ok(_) => (),
                     Err(_) => eprintln!("Error trimming buffered size. Skipping..."),
