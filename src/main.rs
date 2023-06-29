@@ -1,14 +1,34 @@
-use gdal::{
-    raster::{Buffer, GdalType, RasterBand, ResampleAlg},
-    vector::{Field, Geometry, Layer},
-    Dataset, Driver, DriverManager, LayerOptions,
-};
+//! This program takes a directory of geotiff files and adds a margin to them.
+//! The margin is added by using a vrt file as a reference.
+//! the program can then crop the buffered files back down to the original size
+//! this functionality is useful for raster calculations that use a  search radius
+//! to avoid edge effects.
+//! # Example
+//! ```
+//! use std::path::Path;
+//! use vrt_buffer::vrt_buffer;
+//! use vrt_buffer::crop_down_to_size;
+//! let input_dir = Path::new("data");
+//! let padded_output_dir = Path::new("output/padded");
+//! let trimmed_output_dir = Path::new("output/trimmed");
+//! let vrt_file = Path::new("data/data.vrt");
+//! let margin = 10;
+//! vrt_buffer(&input_dir, &padded_output_dir, &vrt_file, margin).unwrap();
+//! // do some calculations with the buffered files
+//! crop_down_to_size(&input_dir, &padded_output_dir, &trimmed_output_dir).unwrap();
+use gdal::{raster::RasterBand, Dataset, DriverManager};
 use std::{
     error::Error,
     fs,
     path::{Path, PathBuf},
 };
 
+/// addeds a margin to the geotiff files in the input directory and saves them to the output directory.
+/// The margin is added by using the vrt file as a reference.
+/// input_dir: directory of the original files
+/// output_dir: directory to save the buffered files
+/// vrt_file: vrt file of the original files
+/// margin: size of the margin to add to the files
 pub fn vrt_buffer(
     input_dir: &Path,
     output_dir: &Path,
@@ -80,8 +100,8 @@ fn add_margin_to_geotiff(
 
     // Compute expanded geotransform
     let mut new_geotransform = geotransform.clone();
-    new_geotransform[0] -= (margin as f32) * geotransform[1]; // x_origin
-    new_geotransform[3] -= (margin as f32) * geotransform[5]; // y_origin
+    new_geotransform[0] -= (margin as f64) * geotransform[1]; // x_origin
+    new_geotransform[3] -= (margin as f64) * geotransform[5]; // y_origin
 
     // Read data from the VRT
     let xoff = ((new_geotransform[0] - vrt_ds.geo_transform()?[0]) / vrt_ds.geo_transform()?[1])
@@ -126,7 +146,7 @@ fn trim_buffered_to_size(
     output_raster: &PathBuf,
 ) -> Result<(), Box<dyn Error>> {
     let dso = Dataset::open(org_raster)?;
-    let mut dsb = Dataset::open(buffered_raster)?;
+    let dsb = Dataset::open(buffered_raster)?;
     let projo = dso.projection();
 
     // Compute offsets in buffered raster based on geo_transform
