@@ -9,3 +9,4 @@ edition = "2021"
 gdal = {version = "0.15.0", features = ["bindgen"]}
 bindgen = "0.66.1"
 ndarray = "0.15.6"
+clap = {version = "4.3.9", features = ["derive"]}
