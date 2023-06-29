@@ -8,14 +8,17 @@
 //! use std::path::Path;
 //! use vrt_buffer::vrt_buffer;
 //! use vrt_buffer::crop_down_to_size;
+//!
 //! let input_dir = Path::new("data");
 //! let padded_output_dir = Path::new("output/padded");
 //! let trimmed_output_dir = Path::new("output/trimmed");
 //! let vrt_file = Path::new("data/data.vrt");
 //! let margin = 10;
+//!
 //! vrt_buffer(&input_dir, &padded_output_dir, &vrt_file, margin).unwrap();
 //! // do some calculations with the buffered files
 //! crop_down_to_size(&input_dir, &padded_output_dir, &trimmed_output_dir).unwrap();
+//!
 use gdal::{raster::RasterBand, Dataset, DriverManager};
 use std::{
     error::Error,
@@ -46,12 +49,32 @@ pub fn vrt_buffer(
     let paths = fs::read_dir(input_dir)?;
 
     // For each file in the directory, add margins and save to the output directory
+
     for path in paths {
-        let path = path?.path();
+        let path = match path {
+            Ok(path) => path.path(),
+            Err(_) => {
+                eprintln!("Error processing path. Skipping...");
+                continue;
+            }
+        };
         if let Some(extension) = path.extension().and_then(std::ffi::OsStr::to_str) {
             if extension == "tif" || extension == "tiff" {
-                let output_path = Path::new(output_dir).join(path.file_name().unwrap());
-                add_margin_to_geotiff(&path, &output_path, margin, &vrt_band, &vrt_ds)?;
+                let output_file_name = match path.file_name() {
+                    Some(file_name) => file_name,
+                    None => {
+                        eprintln!(
+                            "Could not compose a output file name based on {:?}. Skipping...",
+                            path
+                        );
+                        continue;
+                    }
+                };
+                let output_path = Path::new(output_dir).join(output_file_name);
+                match add_margin_to_geotiff(&path, &output_path, margin, &vrt_band, &vrt_ds) {
+                    Ok(_) => (),
+                    Err(_) => eprintln!("Error adding margin to geotiff. Skipping..."),
+                }
             }
         }
     }
@@ -70,16 +93,34 @@ pub fn crop_down_to_size(
 ) -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(&output_dir)?;
     let paths = fs::read_dir(input_dir)?;
+
     for path in paths {
-        let path = path?.path();
+        let path = match path {
+            Ok(path) => path.path(),
+            Err(_) => {
+                eprintln!("Error processing path. Skipping...");
+                continue;
+            }
+        };
         if let Some(extension) = path.extension().and_then(std::ffi::OsStr::to_str) {
             if extension == "tif" || extension == "tiff" {
-                let input_path = org_dir.join(path.file_name().unwrap());
-                let output_path = output_dir.join(path.file_name().unwrap());
-                trim_buffered_to_size(&input_path, &path, &output_path)?;
+                let file_name = match path.file_name() {
+                    Some(file_name) => file_name,
+                    None => {
+                        eprintln!("Could not retrieve file name from {:?}. Skipping...", path);
+                        continue;
+                    }
+                };
+                let input_path = org_dir.join(&file_name);
+                let output_path = output_dir.join(&file_name);
+                match trim_buffered_to_size(&input_path, &path, &output_path) {
+                    Ok(_) => (),
+                    Err(_) => eprintln!("Error trimming buffered size. Skipping..."),
+                }
             }
         }
     }
+
     Ok(())
 }
 
@@ -92,7 +133,6 @@ fn add_margin_to_geotiff(
 ) -> Result<(), Box<dyn Error>> {
     // Open the geotiff file
     let ds = Dataset::open(file_path)?;
-    // let band = ds.rasterband(1)?;
 
     // Get the original geotiff's data and metadata
     let geotransform = ds.geo_transform()?;
