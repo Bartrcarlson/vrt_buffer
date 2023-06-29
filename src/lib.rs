@@ -40,13 +40,8 @@
 //!
 //! ## Installation
 //! gdal must be installed and the path environment variable must be set to the gdal binaries.
-//! build using
-//!```zsh
-//! cargo build --release
-//! cargo install --path .
-//! ```
-//! uninstall with
 //! ```zsh
+//! cargo install --git https://github.com/Bartrcarlson/vrt_buffer.git
 //! cargo uninstall vrt_buffer
 //! ```
 //!
