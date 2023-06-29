@@ -16,7 +16,7 @@ fn main() {
             .unwrap();
         }
         args::Subaction::Crop(crop_args) => {
-            crop_down_to_size(&crop_args.orginal, &crop_args.input, &crop_args.output).unwrap();
+            crop_down_to_size(&crop_args.original, &crop_args.input, &crop_args.output).unwrap();
         }
     }
 }

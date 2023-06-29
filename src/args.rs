@@ -40,14 +40,14 @@ pub struct PadCommand {
 #[derive(Debug, Args)]
 pub struct CropCommand {
     /// the original raster directory used for knowing the extent to crop to
-    #[clap(short, long)]
-    pub orginal: PathBuf,
+    #[clap(short = 'g', long = "original")]
+    pub original: PathBuf,
 
     /// the input raster directory
-    #[clap(short, long)]
+    #[clap(short = 'i', long = "input")]
     pub input: PathBuf,
 
     /// the output raster directory
-    #[clap(short, long)]
+    #[clap(short = 'o', long = "output")]
     pub output: PathBuf,
 }
