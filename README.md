@@ -9,7 +9,7 @@ be cropped back to their original size.
 
 ## Example
 
-```
+```rust
 use std::path::Path;
 use vrt_buffer::vrt_buffer;
 use vrt_buffer::crop_down_to_size;
