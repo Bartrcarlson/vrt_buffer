@@ -38,13 +38,13 @@ Refer to the individual function documentation for more details on their usage.
 the clap framwork is also used to provide a command line interface for the crate.
 To get a list of the available commands.
 
-```zsh
+```sh
 vrt_buffer -h
 ```
 
 ## Installation
 gdal must be installed and the path environment variable must be set to the gdal binaries.
-```zsh
+```sh
 cargo install --git https://github.com/Bartrcarlson/vrt_buffer.git
 cargo uninstall vrt_buffer
 ```
@@ -52,4 +52,4 @@ cargo uninstall vrt_buffer
 This project is licensed under the MIT License
 
 ## Contributing
-Pull requests are welcome. KISS and YAGNI principles are followed.
+Pull requests are welcome.
